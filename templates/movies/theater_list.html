@@ -1,4 +1,5 @@
 {% extends "users/basic.html" %} 
+{% load custom_filters %}
 {% block content %}
 <style>
     /* Styling */
@@ -21,6 +22,22 @@
   font-weight: bold;
   text-align: center;
   margin-bottom: 20px;
+}
+
+.trailer-section {
+  background: #fff;
+  padding: 14px;
+  border-radius: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.trailer-title {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+.trailer-fallback {
+  margin: 0;
 }
 
 /* Theatre Info Styling */
@@ -137,6 +154,26 @@
     <div class="container">
       <!-- Movie Title -->
       <div class="movie-title">Movie - {{ movie.name }}</div>
+
+      {% with movie.trailer_url|youtube_embed_url as safe_trailer_url %}
+      <div class="trailer-section mb-4">
+        <h3 class="trailer-title">Trailer</h3>
+        {% if safe_trailer_url %}
+          <iframe
+            width="100%"
+            height="420"
+            src="{{ safe_trailer_url }}"
+            title="{{ movie.name }} trailer"
+            loading="lazy"
+            referrerpolicy="strict-origin-when-cross-origin"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen>
+          </iframe>
+        {% else %}
+          <p class="trailer-fallback">No trailer available</p>
+        {% endif %}
+      </div>
+      {% endwith %}
   
       <!-- Conditional Check for Theaters -->
       {% if theaters %}

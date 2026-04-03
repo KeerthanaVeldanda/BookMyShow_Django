@@ -38,7 +38,7 @@
           <h5 class="card-title text-center mb-4">Select Your Seats</h5>
           <div class="screen">All eyes this way please!</div>
 
-          <form method="POST">
+          <form method="POST" id="seats-form" action="{% url 'create_payment_order' theaters.id %}">
             {% csrf_token %}
             <div class="d-flex justify-content-center flex-wrap mb-4">
               {% for seat in seats %}
@@ -79,8 +79,11 @@
 
             <!-- Book Button -->
             <div class="text-center">
-              <button type="submit" class="btn btn-success btn-lg">
-                Book Selected Seats
+              {% if error %}
+              <div class="alert alert-danger">{{ error }}</div>
+              {% endif %}
+              <button type="button" class="btn btn-success btn-lg" id="pay-button">
+                Proceed to Payment
               </button>
             </div>
           </form>
@@ -145,6 +148,130 @@
     margin: 0 10px;
   }
 </style>
+
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const seatsForm = document.getElementById('seats-form');
+  const payButton = document.getElementById('pay-button');
+
+  // Handle initial button click (initialize payment order)
+  if (payButton) {
+    payButton.addEventListener('click', function(e) {
+      e.preventDefault();
+      
+      // Get selected seats
+      const selectedSeats = Array.from(document.querySelectorAll('input[name="seats"]:checked')).map(s => s.value);
+      if (selectedSeats.length === 0) {
+        alert('Please select at least one seat');
+        return;
+      }
+
+      // Create form data and submit to create_payment_order
+      const formData = new FormData();
+      selectedSeats.forEach(seatId => formData.append('seats', seatId));
+      formData.append('idempotency_key', 'idempotency_' + Date.now());
+
+      const theaterIdMatch = seatsForm.action.match(/\/(\d+)\/payments/);
+      const theaterId = theaterIdMatch ? theaterIdMatch[1] : null;
+
+      fetch(`/movies/theater/${theaterId}/payments/order/`, {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: formData
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.ok) {
+          openRazorpayCheckout(data);
+        } else {
+          alert('Error: ' + data.message);
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to initialize payment: ' + error);
+      });
+    });
+  }
+});
+
+function openRazorpayCheckout(data) {
+  const options = {
+    key: data.razorpay_key_id,
+    amount: data.amount,
+    currency: data.currency,
+    order_id: data.order_id,
+    handler: function(response) {
+      verifyPayment(data.idempotency_key, data.order_id, response.razorpay_payment_id, response.razorpay_signature);
+    },
+    prefill: {
+      email: '',
+      contact: ''
+    },
+    theme: {
+      color: '#3399cc'
+    },
+    modal: {
+      ondismiss: function() {
+        recordPaymentFailure(data.idempotency_key, 'User closed checkout', 'cancelled');
+      }
+    }
+  };
+
+  const checkout = new Razorpay(options);
+  checkout.open();
+}
+
+function verifyPayment(idempotencyKey, orderId, paymentId, signature) {
+  fetch('/movies/payments/verify/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    },
+    body: new URLSearchParams({
+      'idempotency_key': idempotencyKey,
+      'razorpay_order_id': orderId,
+      'razorpay_payment_id': paymentId,
+      'razorpay_signature': signature
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.ok) {
+      alert('Payment successful! Your seats are booked.');
+      window.location.href = data.redirect_url || '/profile/';
+    } else {
+      alert('Payment verification failed: ' + data.message);
+      recordPaymentFailure(idempotencyKey, data.message, 'failed');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Verification error: ' + error);
+    recordPaymentFailure(idempotencyKey, error.toString(), 'failed');
+  });
+}
+
+function recordPaymentFailure(idempotencyKey, reason, status) {
+  fetch('/movies/payments/failure/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    },
+    body: new URLSearchParams({
+      'idempotency_key': idempotencyKey,
+      'reason': reason,
+      'status': status || 'failed'
+    })
+  });
+}
+</script>
+
 <!-- <h1>Seats for {{theater.name}} - {{theater.movie.name}}</h1>
 {% if error %}
 <p style="color:red;">{{error}}</p>

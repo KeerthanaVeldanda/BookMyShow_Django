@@ -1,4 +1,5 @@
 {% extends "users/basic.html" %}
+{% load custom_filters %}
 
 {% block content %}
 <div class="container py-5">
@@ -13,7 +14,7 @@
                         name="search"
                         placeholder="Search for Movies, Events, Plays, Sports and Activities"
                         type="text"
-                        value="{{ request.GET.search|default_if_none:'' }}"
+                        value="{{ search_term }}"
                         aria-label="Search for movies"
                     />
                     <div class="input-group-append">
@@ -25,12 +26,70 @@
             </form>
         </div>
     </div>
+    <!-- 🔥 OPTIMIZED: Filter Section with Dynamic Counts -->
+<form method="GET" action="{% url 'movie_list' %}" class="mb-4">
+    <!-- Preserve search term in filter form -->
+    <input type="hidden" name="search" value="{{ search_term }}">
 
+    <!-- Genre Filter (ID-based, with dynamic counts) -->
+    <fieldset class="mb-3">
+        <legend class="h6 mb-2"><b>Genre:</b></legend>
+        {% for genre in all_genres %}
+            <div class="form-check form-check-inline">
+                <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="genre_{{ genre.id }}"
+                    name="genre"
+                    value="{{ genre.id }}"
+                    {% if genre.id in selected_genres %}checked{% endif %}
+                >
+                <label class="form-check-label" for="genre_{{ genre.id }}">
+                    {{ genre.name }} <small class="text-muted">({{ genre_counts|dict_lookup:genre.id }})</small>
+                </label>
+            </div>
+        {% empty %}
+            <p class="text-muted mb-0">No genres available.</p>
+        {% endfor %}
+    </fieldset>
+
+    <!-- Language Filter (ID-based, with dynamic counts) -->
+    <fieldset class="mb-3">
+        <legend class="h6 mb-2"><b>Language:</b></legend>
+        {% for lang in all_languages %}
+            <div class="form-check form-check-inline">
+                <input
+                    class="form-check-input"
+                    type="checkbox"
+                    id="language_{{ lang.id }}"
+                    name="language"
+                    value="{{ lang.id }}"
+                    {% if lang.id in selected_languages %}checked{% endif %}
+                >
+                <label class="form-check-label" for="language_{{ lang.id }}">
+                    {{ lang.name }} <small class="text-muted">({{ language_counts|dict_lookup:lang.id }})</small>
+                </label>
+            </div>
+        {% empty %}
+            <p class="text-muted mb-0">No languages available.</p>
+        {% endfor %}
+    </fieldset>
+
+    <!-- Sorting (with correct variable name) -->
+    <label for="sort" class="font-weight-bold">Sort By</label>
+    <select id="sort" name="sort" class="form-control mb-3" aria-label="Sort movies">
+        <option value="rating_desc" {% if sort == 'rating_desc' %}selected{% endif %}>Rating High → Low</option>
+        <option value="date_desc" {% if sort == 'date_desc' %}selected{% endif %}>Latest</option>
+        <option value="name_asc" {% if sort == 'name_asc' %}selected{% endif %}>Name A → Z</option>
+    </select>
+
+    <button type="submit" class="btn btn-primary">Apply Filters</button>
+</form>
     <div class="row" id="movieList">
         {% for movie in movies %}
         <div class="col-md-4 mb-4">
             <div class="card h-100 shadow-sm">
-                <img src="{{ movie.image.url }}" class="card-img-top" alt="{{ movie.name }}" style="height: 300px; object-fit: cover;">
+                <img src="{{ movie.image.url }}" class="card-img-top movie-poster" alt="{{ movie.name }}">
                 <div class="card-body">
                     <h5 class="card-title">{{ movie.name }}</h5>
                     <p class="card-text">
@@ -46,6 +105,20 @@
                     <a href="{% url 'theater_list' movie.id %}" class="btn btn-outline-primary btn-block">
                         View Theaters <i class="fas fa-chevron-right ml-2"></i>
                     </a>
+                    {% if movie.trailer_url %}
+                    <a
+                        href="{{ movie.trailer_url }}"
+                        class="btn btn-danger btn-block mt-2"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        Watch Trailer <i class="fas fa-play ml-2"></i>
+                    </a>
+                    {% else %}
+                    <button class="btn btn-secondary btn-block mt-2" type="button" disabled>
+                        No Trailer Available
+                    </button>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -56,7 +129,18 @@
         {% endfor %}
     </div>
 </div>
+<!-- 🔥 OPTIMIZED: Pagination (preserves filters, sort, and search) -->
+<div class="text-center mt-4">
+    {% if movies.has_previous %}
+        <a href="?page={{ movies.previous_page_number }}{% for genre_id in selected_genres %}&genre={{ genre_id }}{% endfor %}{% for lang_id in selected_languages %}&language={{ lang_id }}{% endfor %}&sort={{ sort }}&search={{ search_term }}" class="btn btn-outline-primary">Previous</a>
+    {% endif %}
 
+    <span class="mx-2">Page {{ movies.number }} of {{ movies.paginator.num_pages }}</span>
+
+    {% if movies.has_next %}
+        <a href="?page={{ movies.next_page_number }}{% for genre_id in selected_genres %}&genre={{ genre_id }}{% endfor %}{% for lang_id in selected_languages %}&language={{ lang_id }}{% endfor %}&sort={{ sort }}&search={{ search_term }}" class="btn btn-outline-primary">Next</a>
+    {% endif %}
+</div>
 <!-- Bootstrap JS and dependencies -->
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
@@ -66,6 +150,11 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 
 <style>
+    .movie-poster {
+        height: 300px;
+        object-fit: cover;
+    }
+
     .card {
         transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
     }
@@ -82,21 +171,9 @@
             function() { $(this).addClass('shadow'); },
             function() { $(this).removeClass('shadow'); }
         );
-
-        // Implement client-side filtering
-        $('input[name="search"]').on('input', function() {
-            var searchTerm = $(this).val().toLowerCase();
-            $('#movieList .col-md-4').each(function() {
-                var movieTitle = $(this).find('.card-title').text().toLowerCase();
-                if (movieTitle.includes(searchTerm)) {
-                    $(this).show();
-                } else {
-                    $(this).hide();
-                }
-            });
-        });
     });
 </script>
+
 <!-- <h1>Movies</h1>
 <ul>
     {% for movie in movies%}

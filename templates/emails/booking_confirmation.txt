@@ -1,0 +1,16 @@
+Hello {{ username }},
+
+Your booking is confirmed.
+
+Movie: {{ movie_name }}
+Theater: {{ theater_name }}
+Show Time: {{ show_time|date:"F d, Y H:i" }}
+Seats: {{ seat_numbers|join:", " }}
+Payment ID: {{ payment_id }}
+Booking IDs: {{ booking_ids|join:", " }}
+Booked At: {{ booked_at|date:"F d, Y H:i" }}
+
+Please keep this email for your records.
+
+Thanks,
+BookMySeat Team

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Booking Confirmation</title>
+    <style>
+      body {
+        font-family: Helvetica, Arial, sans-serif;
+        color: #1f2937;
+        line-height: 1.5;
+      }
+
+      .subtitle {
+        margin-top: 0;
+      }
+
+      table {
+        border-collapse: collapse;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Booking Confirmed</h2>
+    <p class="subtitle">Hello {{ username }}, your booking has been confirmed.</p>
+
+    <table cellpadding="6" cellspacing="0" border="0">
+      <tr>
+        <td><strong>Movie</strong></td>
+        <td>{{ movie_name }}</td>
+      </tr>
+      <tr>
+        <td><strong>Theater</strong></td>
+        <td>{{ theater_name }}</td>
+      </tr>
+      <tr>
+        <td><strong>Show Time</strong></td>
+        <td>{{ show_time|date:"F d, Y H:i" }}</td>
+      </tr>
+      <tr>
+        <td><strong>Seats</strong></td>
+        <td>{{ seat_numbers|join:", " }}</td>
+      </tr>
+      <tr>
+        <td><strong>Payment ID</strong></td>
+        <td>{{ payment_id }}</td>
+      </tr>
+      <tr>
+        <td><strong>Booking IDs</strong></td>
+        <td>{{ booking_ids|join:", " }}</td>
+      </tr>
+      <tr>
+        <td><strong>Booked At</strong></td>
+        <td>{{ booked_at|date:"F d, Y H:i" }}</td>
+      </tr>
+    </table>
+
+    <p>Please keep this confirmation for your records.</p>
+    <p>Thanks,<br/>BookMySeat Team</p>
+  </body>
+</html>

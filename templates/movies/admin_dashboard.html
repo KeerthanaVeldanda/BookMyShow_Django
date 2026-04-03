@@ -1,0 +1,51 @@
+{% extends "users/basic.html" %}
+
+{% block content %}
+<div class="container py-4">
+  <h2>Admin Analytics Dashboard</h2>
+  <p class="text-muted">Generated at: {{ analytics.generated_at }}</p>
+
+  <h4>Revenue</h4>
+  <ul>
+    <li>Daily: {{ analytics.revenue.daily }}</li>
+    <li>Weekly: {{ analytics.revenue.weekly }}</li>
+    <li>Monthly: {{ analytics.revenue.monthly }}</li>
+  </ul>
+
+  <h4>Most Popular Movies</h4>
+  <ul>
+    {% for item in analytics.popular_movies %}
+      <li>{{ item.movie__name }} - {{ item.total_bookings }} bookings</li>
+    {% empty %}
+      <li>No booking data available.</li>
+    {% endfor %}
+  </ul>
+
+  <h4>Busiest Theaters (Occupancy)</h4>
+  <ul>
+    {% for item in analytics.busiest_theaters %}
+      <li>{{ item.name }} - {{ item.booked_seats }}/{{ item.total_seats }} ({{ item.occupancy_rate|floatformat:2 }}%)</li>
+    {% empty %}
+      <li>No theater data available.</li>
+    {% endfor %}
+  </ul>
+
+  <h4>Peak Booking Hours</h4>
+  <ul>
+    {% for item in analytics.peak_booking_hours %}
+      <li>{{ item.hour }}:00 - {{ item.total_bookings }} bookings</li>
+    {% empty %}
+      <li>No hourly booking data available.</li>
+    {% endfor %}
+  </ul>
+
+  <h4>Cancellation Rate</h4>
+  {% if analytics.cancellation_rate is not None %}
+    <p>{{ analytics.cancellation_rate }}%</p>
+  {% else %}
+    <p>Status field not available on Booking model.</p>
+  {% endif %}
+
+  <p class="text-muted">Cache TTL: {{ analytics.cache_ttl_seconds }} seconds</p>
+</div>
+{% endblock %}
