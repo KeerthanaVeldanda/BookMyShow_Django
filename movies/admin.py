@@ -1,17 +1,50 @@
 from django.contrib import admin
-from .models import Movie, Theater, Seat,Booking, PaymentAttempt, PaymentWebhookEvent
+from .models import Genre, Language, Movie, Theater, Seat, Booking, PaymentAttempt, PaymentWebhookEvent
+
+
+@admin.register(Genre)
+class GenreAdmin(admin.ModelAdmin):
+    search_fields = ['name']
+    list_display = ['name']
+
+
+@admin.register(Language)
+class LanguageAdmin(admin.ModelAdmin):
+    search_fields = ['name']
+    list_display = ['name']
+
+
+class TheaterInline(admin.TabularInline):
+    model = Theater
+    extra = 0
+
+
+class SeatInline(admin.TabularInline):
+    model = Seat
+    extra = 0
 
 @admin.register(Movie)
 class MovieAdmin(admin.ModelAdmin):
     list_display = ['name', 'rating', 'cast','description']
+    search_fields = ['name', 'cast', 'description']
+    list_filter = ['rating', 'genre', 'language']
+    filter_horizontal = ['genre', 'language']
+    inlines = [TheaterInline]
+
 
 @admin.register(Theater)
 class TheaterAdmin(admin.ModelAdmin):
     list_display = ['name', 'movie', 'time']
+    search_fields = ['name', 'movie__name']
+    list_filter = ['movie']
+    inlines = [SeatInline]
+
 
 @admin.register(Seat)
 class SeatAdmin(admin.ModelAdmin):
     list_display = ['theater', 'seat_number', 'is_booked']
+    search_fields = ['seat_number', 'theater__name', 'theater__movie__name']
+    list_filter = ['is_booked', 'theater']
 
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
