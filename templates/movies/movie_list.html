@@ -131,15 +131,28 @@
 </div>
 <!-- 🔥 OPTIMIZED: Pagination (preserves filters, sort, and search) -->
 <div class="text-center mt-4">
-    {% if movies.has_previous %}
-        <a href="?page={{ movies.previous_page_number }}{% for genre_id in selected_genres %}&genre={{ genre_id }}{% endfor %}{% for lang_id in selected_languages %}&language={{ lang_id }}{% endfor %}&sort={{ sort }}&search={{ search_term }}" class="btn btn-outline-primary">Previous</a>
-    {% endif %}
+    <div class="mb-2">Page {{ movies.number }} of {{ movies.paginator.num_pages }}</div>
+    <div class="pagination-wrap">
+        {% if movies.has_previous %}
+            <a href="?page={{ movies.previous_page_number }}{% for genre_id in selected_genres %}&genre={{ genre_id }}{% endfor %}{% for lang_id in selected_languages %}&language={{ lang_id }}{% endfor %}&sort={{ sort }}&search={{ search_term }}" class="btn btn-outline-primary btn-sm">Previous</a>
+        {% else %}
+            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Previous</button>
+        {% endif %}
 
-    <span class="mx-2">Page {{ movies.number }} of {{ movies.paginator.num_pages }}</span>
+        {% for page_num in movies.paginator.page_range %}
+            {% if page_num == movies.number %}
+                <button class="btn btn-primary btn-sm" type="button" disabled>{{ page_num }}</button>
+            {% elif page_num >= movies.number|add:'-2' and page_num <= movies.number|add:'2' %}
+                <a href="?page={{ page_num }}{% for genre_id in selected_genres %}&genre={{ genre_id }}{% endfor %}{% for lang_id in selected_languages %}&language={{ lang_id }}{% endfor %}&sort={{ sort }}&search={{ search_term }}" class="btn btn-outline-primary btn-sm">{{ page_num }}</a>
+            {% endif %}
+        {% endfor %}
 
-    {% if movies.has_next %}
-        <a href="?page={{ movies.next_page_number }}{% for genre_id in selected_genres %}&genre={{ genre_id }}{% endfor %}{% for lang_id in selected_languages %}&language={{ lang_id }}{% endfor %}&sort={{ sort }}&search={{ search_term }}" class="btn btn-outline-primary">Next</a>
-    {% endif %}
+        {% if movies.has_next %}
+            <a href="?page={{ movies.next_page_number }}{% for genre_id in selected_genres %}&genre={{ genre_id }}{% endfor %}{% for lang_id in selected_languages %}&language={{ lang_id }}{% endfor %}&sort={{ sort }}&search={{ search_term }}" class="btn btn-outline-primary btn-sm">Next</a>
+        {% else %}
+            <button class="btn btn-outline-secondary btn-sm" type="button" disabled>Next</button>
+        {% endif %}
+    </div>
 </div>
 <!-- Bootstrap JS and dependencies -->
 <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
@@ -161,6 +174,14 @@
     .card:hover {
         transform: translateY(-5px);
         box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+    }
+
+    .pagination-wrap {
+        display: inline-flex;
+        gap: 6px;
+        align-items: center;
+        flex-wrap: wrap;
+        justify-content: center;
     }
 </style>
 
