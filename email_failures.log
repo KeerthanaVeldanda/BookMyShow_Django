@@ -1,0 +1,15 @@
+2026-04-09 13:37:11,335 ERROR movies.payment Failed to create Razorpay order
+Traceback (most recent call last):
+  File "C:\Users\keert\OneDrive\Desktop\djnago-bookmyshow-clone\movies\views.py", line 477, in create_payment_order
+    client = _create_razorpay_client()
+  File "C:\Users\keert\OneDrive\Desktop\djnago-bookmyshow-clone\movies\views.py", line 50, in _create_razorpay_client
+    raise RuntimeError('razorpay package is not installed')
+RuntimeError: razorpay package is not installed
+2026-04-09 13:37:17,463 ERROR movies.payment Failed to create Razorpay order
+Traceback (most recent call last):
+  File "C:\Users\keert\OneDrive\Desktop\djnago-bookmyshow-clone\movies\views.py", line 477, in create_payment_order
+    client = _create_razorpay_client()
+  File "C:\Users\keert\OneDrive\Desktop\djnago-bookmyshow-clone\movies\views.py", line 50, in _create_razorpay_client
+    raise RuntimeError('razorpay package is not installed')
+RuntimeError: razorpay package is not installed
+2026-04-09 13:44:19,137 WARNING movies.payment Payment marked unsuccessful and locks released

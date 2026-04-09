@@ -40,6 +40,7 @@ class Command(BaseCommand):
                 'languages': ['English'],
                 'poster_color': (220, 53, 69),
                 'theater_name': 'IMAX Screen 1',
+                'trailer_url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
             },
             {
                 'name': 'Heartbeats',
@@ -50,6 +51,7 @@ class Command(BaseCommand):
                 'languages': ['Hindi'],
                 'poster_color': (13, 110, 253),
                 'theater_name': 'Grand Hall 2',
+                'trailer_url': 'https://www.youtube.com/watch?v=oHg5SJYRHA0',
             },
         ]
 
@@ -64,8 +66,19 @@ class Command(BaseCommand):
                     'rating': movie_data['rating'],
                     'cast': movie_data['cast'],
                     'description': movie_data['description'],
+                    'trailer_url': movie_data['trailer_url'],
                 },
             )
+
+            movie_changed = False
+            for field_name in ['rating', 'cast', 'description', 'trailer_url']:
+                new_value = movie_data[field_name]
+                if getattr(movie, field_name) != new_value:
+                    setattr(movie, field_name, new_value)
+                    movie_changed = True
+
+            if movie_changed:
+                movie.save(update_fields=['rating', 'cast', 'description', 'trailer_url'])
 
             if movie_created or not movie.image:
                 self._attach_placeholder_poster(movie, movie_data['poster_color'])

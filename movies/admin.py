@@ -25,8 +25,8 @@ class SeatInline(admin.TabularInline):
 
 @admin.register(Movie)
 class MovieAdmin(admin.ModelAdmin):
-    list_display = ['name', 'rating', 'cast','description']
-    search_fields = ['name', 'cast', 'description']
+    list_display = ['name', 'rating', 'cast', 'description', 'trailer_url']
+    search_fields = ['name', 'cast', 'description', 'trailer_url']
     list_filter = ['rating', 'genre', 'language']
     filter_horizontal = ['genre', 'language']
     inlines = [TheaterInline]

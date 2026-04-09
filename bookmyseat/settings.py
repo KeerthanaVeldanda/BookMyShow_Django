@@ -89,13 +89,6 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = os.getenv('CELERY_TIMEZONE', 'UTC')
 
-# Celery Beat: Periodic task schedule for auto-releasing expired seat locks
-# =========================================================================
-# Seats are locked for 120 seconds (2 minutes) during payment. This periodic task
-# runs every 60 seconds to auto-release any locks that have exceeded the timeout.
-# This handles edge cases: user closes app, network failure, abandoned payments.
-from celery.schedules import schedule
-
 CELERY_BEAT_SCHEDULE = {
     'release-expired-seat-locks': {
         'task': 'movies.tasks.release_expired_seat_locks_task',
@@ -181,12 +174,22 @@ DATABASES = {
     }
 }
 
-# Use Render-provided DATABASE_URL in production, sqlite locally as fallback.
-DATABASES['default'] = dj_database_url.config(
-    default=os.getenv('DATABASE_URL', f'sqlite:///{BASE_DIR / "db.sqlite3"}'),
-    conn_max_age=600,
-    ssl_require=not DEBUG,
-)
+# Use SQLite locally by default, and PostgreSQL only when explicitly enabled.
+# This avoids trying to connect to a private cloud database host from a local machine.
+USE_POSTGRES = os.getenv('USE_POSTGRES', '').lower() == 'true'
+DATABASE_URL = os.getenv('DATABASE_URL', '')
+
+if USE_POSTGRES or not DEBUG:
+    DATABASES['default'] = dj_database_url.config(
+        default=DATABASE_URL or f'sqlite:///{BASE_DIR / "db.sqlite3"}',
+        conn_max_age=600,
+        ssl_require=not DEBUG,
+    )
+else:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

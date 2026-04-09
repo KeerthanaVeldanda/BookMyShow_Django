@@ -10,6 +10,7 @@ from uuid import uuid4
 import logging
 import json
 import importlib
+import warnings
 from threading import Thread
 from datetime import timedelta
 from django.conf import settings
@@ -33,7 +34,13 @@ from .reservations import (
 )
 
 try:
-    razorpay = importlib.import_module('razorpay')
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            'ignore',
+            message='pkg_resources is deprecated as an API.*',
+            category=UserWarning,
+        )
+        razorpay = importlib.import_module('razorpay')
 except Exception:  # pragma: no cover
     razorpay = None
 
@@ -467,7 +474,7 @@ def create_payment_order(request, theater_id):
                     },
                     status=409,
                 )
-    except Exception as e:
+    except Exception:
         payment_logger.exception('Error holding seats for payment', extra={'attempt_id': attempt.id})
         return JsonResponse({'ok': False, 'message': 'Error reserving seats'}, status=500)
 
@@ -723,7 +730,32 @@ def admin_analytics_dashboard(request):
     if cached:
         if request.GET.get('format') == 'json' or 'application/json' in request.headers.get('Accept', ''):
             return JsonResponse(cached)
-        return render(request, 'movies/admin_dashboard.html', {'analytics': cached})
+        dashboard_movies = list(
+            Movie.objects.select_related().prefetch_related('genre', 'language', 'theaters__seats')
+            .annotate(
+                total_theaters=Count('theaters', distinct=True),
+                total_seats=Count('theaters__seats', distinct=True),
+                booked_seats=Count('theaters__seats', filter=Q(theaters__seats__is_booked=True), distinct=True),
+            )
+            .order_by('-id')
+        )
+        return render(
+            request,
+            'movies/admin_dashboard.html',
+            {
+                'analytics': cached,
+                'dashboard_movies': dashboard_movies,
+                'dashboard_summary': {
+                    'total_movies': Movie.objects.count(),
+                    'total_theaters': Theater.objects.count(),
+                    'total_seats': Seat.objects.count(),
+                    'total_booked_seats': Seat.objects.filter(is_booked=True).count(),
+                    'total_available_seats': Seat.objects.filter(is_booked=False).count(),
+                    'total_genres': Genre.objects.count(),
+                    'total_languages': Language.objects.count(),
+                },
+            },
+        )
 
     now = timezone.now()
     start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -817,11 +849,59 @@ def admin_analytics_dashboard(request):
         'cache_ttl_seconds': cache_timeout,
     }
 
+    dashboard_movies = list(
+        Movie.objects.select_related().prefetch_related('genre', 'language', 'theaters__seats')
+        .annotate(
+            total_theaters=Count('theaters', distinct=True),
+            total_seats=Count('theaters__seats', distinct=True),
+            booked_seats=Count('theaters__seats', filter=Q(theaters__seats__is_booked=True), distinct=True),
+        )
+        .order_by('-id')
+    )
+
+    dashboard_summary = {
+        'total_movies': Movie.objects.count(),
+        'total_theaters': Theater.objects.count(),
+        'total_seats': Seat.objects.count(),
+        'total_booked_seats': Seat.objects.filter(is_booked=True).count(),
+        'total_available_seats': Seat.objects.filter(is_booked=False).count(),
+        'total_genres': Genre.objects.count(),
+        'total_languages': Language.objects.count(),
+    }
+
     cache.set(cache_key, analytics, timeout=cache_timeout)
 
     if request.GET.get('format') == 'json' or 'application/json' in request.headers.get('Accept', ''):
-        return JsonResponse(analytics)
-    return render(request, 'movies/admin_dashboard.html', {'analytics': analytics})
+        return JsonResponse({
+            'analytics': analytics,
+            'summary': dashboard_summary,
+            'movies': [
+                {
+                    'id': movie.id,
+                    'name': movie.name,
+                    'rating': float(movie.rating),
+                    'cast': movie.cast,
+                    'description': movie.description,
+                    'trailer_url': movie.trailer_url,
+                    'image_url': movie.image.url if movie.image else '',
+                    'genres': [genre.name for genre in movie.genre.all()],
+                    'languages': [language.name for language in movie.language.all()],
+                    'total_theaters': movie.total_theaters,
+                    'total_seats': movie.total_seats,
+                    'booked_seats': movie.booked_seats,
+                }
+                for movie in dashboard_movies
+            ],
+        })
+    return render(
+        request,
+        'movies/admin_dashboard.html',
+        {
+            'analytics': analytics,
+            'dashboard_movies': dashboard_movies,
+            'dashboard_summary': dashboard_summary,
+        },
+    )
 
 
 

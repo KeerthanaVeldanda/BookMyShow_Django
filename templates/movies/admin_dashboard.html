@@ -1,43 +1,120 @@
 {% extends "users/basic.html" %}
+{% load custom_filters %}
 
 {% block content %}
 <div class="container py-4">
-  <h2>Admin Analytics Dashboard</h2>
+  <h2 class="mb-4">Movies Dashboard</h2>
   <p class="text-muted">Generated at: {{ analytics.generated_at }}</p>
 
-  <h4>Revenue</h4>
-  <ul>
-    <li>Daily: {{ analytics.revenue.daily }}</li>
-    <li>Weekly: {{ analytics.revenue.weekly }}</li>
-    <li>Monthly: {{ analytics.revenue.monthly }}</li>
-  </ul>
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted">Movies</div>
+          <div class="h3 mb-0">{{ dashboard_summary.total_movies }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted">Theaters</div>
+          <div class="h3 mb-0">{{ dashboard_summary.total_theaters }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted">Seats Booked</div>
+          <div class="h3 mb-0">{{ dashboard_summary.total_booked_seats }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted">Seats Available</div>
+          <div class="h3 mb-0">{{ dashboard_summary.total_available_seats }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <h4>Most Popular Movies</h4>
-  <ul>
-    {% for item in analytics.popular_movies %}
-      <li>{{ item.movie__name }} - {{ item.total_bookings }} bookings</li>
-    {% empty %}
-      <li>No booking data available.</li>
-    {% endfor %}
-  </ul>
+  <div class="row g-3 mb-5">
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted">Genres</div>
+          <div class="h3 mb-0">{{ dashboard_summary.total_genres }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted">Languages</div>
+          <div class="h3 mb-0">{{ dashboard_summary.total_languages }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <div class="text-muted">Total Seats</div>
+          <div class="h3 mb-0">{{ dashboard_summary.total_seats }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <h4>Busiest Theaters (Occupancy)</h4>
-  <ul>
-    {% for item in analytics.busiest_theaters %}
-      <li>{{ item.name }} - {{ item.booked_seats }}/{{ item.total_seats }} ({{ item.occupancy_rate|floatformat:2 }}%)</li>
-    {% empty %}
-      <li>No theater data available.</li>
-    {% endfor %}
-  </ul>
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Revenue</h5>
+          <div>Daily: {{ analytics.revenue.daily }}</div>
+          <div>Weekly: {{ analytics.revenue.weekly }}</div>
+          <div>Monthly: {{ analytics.revenue.monthly }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Most Popular Movies</h5>
+          {% for item in analytics.popular_movies %}
+            <div>{{ item.movie__name }} - {{ item.total_bookings }} bookings</div>
+          {% empty %}
+            <div>No booking data available.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card shadow-sm h-100">
+        <div class="card-body">
+          <h5 class="card-title">Peak Booking Hours</h5>
+          {% for item in analytics.peak_booking_hours %}
+            <div>{{ item.hour }}:00 - {{ item.total_bookings }} bookings</div>
+          {% empty %}
+            <div>No hourly booking data available.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
 
-  <h4>Peak Booking Hours</h4>
-  <ul>
-    {% for item in analytics.peak_booking_hours %}
-      <li>{{ item.hour }}:00 - {{ item.total_bookings }} bookings</li>
-    {% empty %}
-      <li>No hourly booking data available.</li>
-    {% endfor %}
-  </ul>
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <h5 class="card-title">Busiest Theaters (Occupancy)</h5>
+      {% for item in analytics.busiest_theaters %}
+        <div>{{ item.name }} - {{ item.booked_seats }}/{{ item.total_seats }} ({{ item.occupancy_rate|floatformat:2 }}%)</div>
+      {% empty %}
+        <div>No theater data available.</div>
+      {% endfor %}
+    </div>
+  </div>
 
   <h4>Cancellation Rate</h4>
   {% if analytics.cancellation_rate is not None %}
@@ -47,5 +124,47 @@
   {% endif %}
 
   <p class="text-muted">Cache TTL: {{ analytics.cache_ttl_seconds }} seconds</p>
+
+  <hr class="my-5">
+
+  <h4 class="mb-3">All Movies Added</h4>
+  <div class="row">
+    {% for movie in dashboard_movies %}
+      <div class="col-lg-6 mb-4">
+        <div class="card shadow-sm h-100">
+          {% if movie.image %}
+            <img src="{{ movie.image.url }}" class="card-img-top dashboard-movie-poster" alt="{{ movie.name }}">
+          {% endif %}
+          <div class="card-body">
+            <h5 class="card-title mb-1">{{ movie.name }}</h5>
+            <p class="mb-2"><strong>Rating:</strong> {{ movie.rating }}</p>
+            <p class="mb-2"><strong>Cast:</strong> {{ movie.cast }}</p>
+            {% if movie.description %}
+              <p class="text-muted mb-2">{{ movie.description }}</p>
+            {% endif %}
+            <p class="mb-2"><strong>Genres:</strong> {% for genre in movie.genre.all %}{{ genre.name }}{% if not forloop.last %}, {% endif %}{% empty %}None{% endfor %}</p>
+            <p class="mb-2"><strong>Languages:</strong> {% for language in movie.language.all %}{{ language.name }}{% if not forloop.last %}, {% endif %}{% empty %}None{% endfor %}</p>
+            <p class="mb-2"><strong>Theaters:</strong> {{ movie.total_theaters }} | <strong>Seats:</strong> {{ movie.total_seats }} | <strong>Booked:</strong> {{ movie.booked_seats }}</p>
+            {% if movie.trailer_url %}
+              <a href="{{ movie.trailer_url }}" target="_blank" rel="noopener noreferrer" class="btn btn-danger btn-sm">Watch Trailer</a>
+            {% else %}
+              <span class="text-muted">No trailer added</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <div class="col-12">
+        <p>No movies added yet.</p>
+      </div>
+    {% endfor %}
+  </div>
+
+  <style>
+    .dashboard-movie-poster {
+      height: 280px;
+      object-fit: cover;
+    }
+  </style>
 </div>
 {% endblock %}
